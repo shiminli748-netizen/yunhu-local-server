@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云湖模拟服务器 - 管理后台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* Login */
+        .login-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .login-card { background: var(--card); border-radius: 16px; padding: 48px; width: 400px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+        .login-card h1 { font-size: 24px; margin-bottom: 8px; text-align: center; }
+        .login-card p { color: var(--text-secondary); text-align: center; margin-bottom: 32px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+        .form-group input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        .form-group input:focus { border-color: var(--primary); }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+
+        /* Dashboard */
+        .dashboard { display: none; }
+        .dashboard.active { display: block; }
+        .header { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { font-size: 20px; }
+        .header-right { display: flex; align-items: center; gap: 16px; }
+        .header-right span { color: var(--text-secondary); font-size: 14px; }
+        .main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+        /* Stats */
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .stat-card .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--card); border-radius: 12px; padding: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .tab { padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-secondary); transition: all 0.2s; }
+        .tab.active { background: var(--primary); color: white; }
+        .tab:hover:not(.active) { background: var(--bg); }
+
+        /* Table */
+        .table-card { background: var(--card); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); overflow: hidden; }
+        .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .table-header h2 { font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 20px; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg); border-bottom: 1px solid var(--border); }
+        td { padding: 12px 20px; font-size: 14px; border-bottom: 1px solid var(--border); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        .actions { display: flex; gap: 6px; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .empty-state { text-align: center; padding: 48px; color: var(--text-secondary); }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+        .toast { background: var(--card); border-radius: 8px; padding: 12px 20px; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); font-size: 14px; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .refresh-btn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+        .refresh-btn:hover { background: var(--bg); }
+    </style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Login -->
+<div class="login-container" id="loginPage">
+    <div class="login-card">
+        <h1>🛡️ 云湖管理后台</h1>
+        <p>模拟服务器管理面板</p>
+        <div class="form-group">
+            <label>用户名</label>
+            <input type="text" id="loginUsername" value="admin" placeholder="管理员用户名">
+        </div>
+        <div class="form-group">
+            <label>密码</label>
+            <input type="password" id="loginPassword" value="admin123" placeholder="密码">
+        </div>
+        <button class="btn btn-primary" onclick="doLogin()">登 录</button>
+    </div>
+</div>
+
+<!-- Dashboard -->
+<div class="dashboard" id="dashboard">
+    <div class="header">
+        <h1>🛡️ 云湖管理后台</h1>
+        <div class="header-right">
+            <span id="adminName"></span>
+            <button class="btn btn-sm btn-danger" onclick="doLogout()">退出</button>
+        </div>
+    </div>
+    <div class="main">
+        <div class="stats" id="statsArea">
+            <div class="stat-card"><div class="label">用户总数</div><div class="value" id="statUsers">-</div></div>
+            <div class="stat-card"><div class="label">群组总数</div><div class="value" id="statGroups">-</div></div>
+            <div class="stat-card"><div class="label">消息总数</div><div class="value" id="statMessages">-</div></div>
+            <div class="stat-card"><div class="label">机器人总数</div><div class="value" id="statBots">-</div></div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('users')">用户管理</div>
+            <div class="tab" onclick="switchTab('groups')">群组管理</div>
+            <div class="tab" onclick="switchTab('messages')">消息记录</div>
+            <div class="tab" onclick="switchTab('bots')">机器人管理</div>
+        </div>
+
+        <!-- Users -->
+        <div class="tab-content active" id="tab-users">
+            <div class="table-card">
+                <div class="table-header">
+                    <h2>用户列表</h2>
+                    <button class="refresh-btn" onclick="loadUsers()">🔄 刷新</button>
+                </div>
+                <table>
+                    <thead><tr><th>ID</th><th>昵称</th><th>手机</th><th>邮箱</th><th>VIP</th><th>管理员</th><th>封禁</th><th>金币</th><th>操作</th></tr></thead>
+                    <tbody id="usersBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Groups -->
+        <div class="tab-content" id="tab-groups">
+            <div class="table-card">
+                <div class="table-header">
+                    <h2>群组列表</h2>
+                    <button class="refresh-btn" onclick="loadGroups()">🔄 刷新</button>
+                </div>
+                <table>
+                    <thead><tr><th>ID</th><th>群名</th><th>群主</th><th>人数</th><th>分类</th><th>状态</th><th>操作</th></tr></thead>
+                    <tbody id="groupsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="tab-content" id="tab-messages">
+            <div class="table-card">
+                <div class="table-header">
+                    <h2>消息记录</h2>
+                    <button class="refresh-btn" onclick="loadMessages()">🔄 刷新</button>
+                </div>
+                <table>
+                    <thead><tr><th>消息ID</th><th>会话ID</th><th>类型</th><th>发送者</th><th>内容</th><th>时间</th><th>状态</th></tr></thead>
+                    <tbody id="messagesBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Bots -->
+        <div class="tab-content" id="tab-bots">
+            <div class="table-card">
+                <div class="table-header">
+                    <h2>机器人列表</h2>
+                    <button class="refresh-btn" onclick="loadBots()">🔄 刷新</button>
+                </div>
+                <table>
+                    <thead><tr><th>ID</th><th>名称</th><th>创建者</th><th>状态</th><th>使用人数</th><th>创建时间</th></tr></thead>
+                    <tbody id="botsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+let authToken = '';
+
+function toast(msg, type = 'info') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.style.borderLeft = `4px solid ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#4f46e5'}`;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+async function api(path, method = 'GET', body = null) {
+    const opts = { method, headers: {} };
+    if (authToken) opts.headers['token'] = authToken;
+    if (body) {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+    }
+    const res = await fetch(API_BASE + path, opts);
+    return await res.json();
+}
+
+async function doLogin() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    try {
+        const r = await api('/api/admin/login', 'POST', { username, password });
+        if (r.code === 1) {
+            authToken = r.data.token;
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('dashboard').classList.add('active');
+            document.getElementById('adminName').textContent = `管理员: ${r.data.userId}`;
+            loadAll();
+            toast('登录成功', 'success');
+        } else {
+            toast(r.msg || '登录失败', 'error');
+        }
+    } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+    }
+}
+
+function doLogout() {
+    authToken = '';
+    document.getElementById('dashboard').classList.remove('active');
+    document.getElementById('loginPage').style.display = 'flex';
+}
+
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', t.textContent.includes(
+            name === 'users' ? '用户' : name === 'groups' ? '群组' : name === 'messages' ? '消息' : '机器人'
+        ));
+    });
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+}
+
+function loadAll() {
+    loadUsers(); loadGroups(); loadMessages(); loadBots();
+}
+
+function formatTime(ts) {
+    if (!ts) return '-';
+    const d = new Date(parseInt(ts));
+    return d.toLocaleString('zh-CN');
+}
+
+function chatTypeLabel(t) {
+    return t === 1 ? '私聊' : t === 2 ? '群聊' : '未知';
+}
+
+async function loadUsers() {
+    try {
+        const r = await api('/api/admin/users');
+        if (r.code !== 1) return;
+        const users = r.data.list;
+        document.getElementById('statUsers').textContent = users.length;
+        const body = document.getElementById('usersBody');
+        body.innerHTML = users.map(u => `
+            <tr>
+                <td title="${u.id}">${u.id.substring(0, 12)}...</td>
+                <td>${u.name || '-'}</td>
+                <td>${u.phone || '-'}</td>
+                <td>${u.email || '-'}</td>
+                <td>${u.isVip ? '<span class="badge badge-warning">VIP</span>' : '<span class="badge">普通</span>'}</td>
+                <td>${u.isAdmin ? '<span class="badge badge-info">管理员</span>' : '-'}</td>
+                <td>${u.isBanned ? '<span class="badge badge-danger">封禁</span>' : '<span class="badge badge-success">正常</span>'}</td>
+                <td>${u.coin || 0}</td>
+                <td class="actions">
+                    <button class="btn btn-sm btn-warning" onclick="toggleVip('${u.id}', ${u.isVip ? 0 : 1})">${u.isVip ? '取消VIP' : '设VIP'}</button>
+                    <button class="btn btn-sm btn-info" onclick="toggleAdmin('${u.id}', ${u.isAdmin ? 0 : 1})">${u.isAdmin ? '取消管理' : '设管理'}</button>
+                    <button class="btn btn-sm btn-danger" onclick="toggleBan('${u.id}', ${u.isBanned ? 0 : 1})">${u.isBanned ? '解封' : '封禁'}</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) { toast('加载用户失败', 'error'); }
+}
+
+async function loadGroups() {
+    try {
+        const r = await api('/api/admin/groups');
+        if (r.code !== 1) return;
+        const groups = r.data.list;
+        document.getElementById('statGroups').textContent = groups.length;
+        const body = document.getElementById('groupsBody');
+        body.innerHTML = groups.map(g => `
+            <tr>
+                <td title="${g.id}">${g.id.substring(0, 12)}...</td>
+                <td>${g.name || '-'}</td>
+                <td title="${g.ownerId}">${(g.ownerId || '-').substring(0, 12)}</td>
+                <td>${g.headcount}</td>
+                <td>${g.category || '-'}</td>
+                <td>${g.isDissolved ? '<span class="badge badge-danger">已解散</span>' : '<span class="badge badge-success">正常</span>'}</td>
+                <td>${g.isDissolved ? '-' : `<button class="btn btn-sm btn-danger" onclick="dissolveGroup('${g.id}')">解散</button>`}</td>
+            </tr>
+        `).join('');
+    } catch (e) { toast('加载群组失败', 'error'); }
+}
+
+async function loadMessages() {
+    try {
+        const r = await api('/api/admin/messages');
+        if (r.code !== 1) return;
+        const msgs = r.data.list;
+        document.getElementById('statMessages').textContent = msgs.length;
+        const body = document.getElementById('messagesBody');
+        body.innerHTML = msgs.map(m => `
+            <tr>
+                <td title="${m.msgId}">${(m.msgId || '').substring(0, 12)}</td>
+                <td title="${m.chatId}">${(m.chatId || '').substring(0, 12)}</td>
+                <td>${chatTypeLabel(m.chatType)}</td>
+                <td>${m.senderName || m.senderId || '-'}</td>
+                <td title="${m.content}">${(m.content || '').substring(0, 50)}</td>
+                <td>${formatTime(m.timestamp)}</td>
+                <td>
+                    ${m.isDeleted ? '<span class="badge badge-danger">已删</span>' : ''}
+                    ${m.isRecalled ? '<span class="badge badge-warning">已撤</span>' : ''}
+                    ${!m.isDeleted && !m.isRecalled ? '<span class="badge badge-success">正常</span>' : ''}
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) { toast('加载消息失败', 'error'); }
+}
+
+async function loadBots() {
+    try {
+        const r = await api('/api/admin/bots');
+        if (r.code !== 1) return;
+        const bots = r.data.list;
+        document.getElementById('statBots').textContent = bots.length;
+        const body = document.getElementById('botsBody');
+        body.innerHTML = bots.map(b => `
+            <tr>
+                <td title="${b.id}">${b.id.substring(0, 12)}...</td>
+                <td>${b.name || '-'}</td>
+                <td title="${b.ownerId}">${(b.ownerId || '-').substring(0, 12)}</td>
+                <td>${b.isActive ? '<span class="badge badge-success">活跃</span>' : '<span class="badge badge-danger">停用</span>'}</td>
+                <td>${b.headcount}</td>
+                <td>${formatTime(b.createTime)}</td>
+            </tr>
+        `).join('');
+    } catch (e) { toast('加载机器人失败', 'error'); }
+}
+
+async function toggleVip(uid, val) {
+    const r = await api('/api/admin/set-vip', 'POST', { userId: uid, isVip: val, expiredTime: val ? Date.now() + 365*24*3600*1000 : 0 });
+    toast(r.code === 1 ? '操作成功' : r.msg, r.code === 1 ? 'success' : 'error');
+    loadUsers();
+}
+
+async function toggleAdmin(uid, val) {
+    const r = await api('/api/admin/set-admin', 'POST', { userId: uid, isAdmin: val });
+    toast(r.code === 1 ? '操作成功' : r.msg, r.code === 1 ? 'success' : 'error');
+    loadUsers();
+}
+
+async function toggleBan(uid, val) {
+    const r = await api('/api/admin/ban-user', 'POST', { userId: uid, isBanned: val, banTime: val ? Date.now() + 365*24*3600*1000 : 0 });
+    toast(r.code === 1 ? '操作成功' : r.msg, r.code === 1 ? 'success' : 'error');
+    loadUsers();
+}
+
+async function dissolveGroup(gid) {
+    if (!confirm('确定要解散该群组吗？')) return;
+    const r = await api('/api/admin/dissolve-group', 'POST', { groupId: gid });
+    toast(r.code === 1 ? '操作成功' : r.msg, r.code === 1 ? 'success' : 'error');
+    loadGroups();
+}
+
+// Auto-refresh every 30s
+setInterval(() => { if (authToken) loadAll(); }, 30000);
+</script>
+</body>
+</html>

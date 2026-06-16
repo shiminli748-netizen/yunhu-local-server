@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+data/yunhu.db
+cert/*.pem
+static/uploads/*
+!static/uploads/.gitkeep
